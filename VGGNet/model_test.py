@@ -6,7 +6,7 @@ from vgg_model import VGGNet
 
 def test_data_process():
     #数据下载
-    test_data = FashionMNIST(root="./data",
+    test_data = FashionMNIST(root="../data",
                               train=False,
                               transform=transforms.Compose([transforms.Resize(size=227), transforms.ToTensor()]),
                               download=True)

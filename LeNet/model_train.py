@@ -8,13 +8,15 @@ from torchvision import transforms
 import torch.utils.data as Data
 import numpy as np
 import matplotlib.pyplot as plt
-from model import LeNet
+from le_model import LeNet
 import pandas as pd
+from torch.utils.tensorboard import SummaryWriter
+from tqdm import tqdm
 
 #数据集加载和处理
 def train_val_data_process():
     #数据下载
-    train_data = FashionMNIST(root="./data",
+    train_data = FashionMNIST(root="../data",
                               train=True,
                               transform=transforms.Compose([transforms.Resize(size=28), transforms.ToTensor()]),
                               download=True)
@@ -58,6 +60,8 @@ def train_model_process(model,train_dataloader,val_dataloader,num_epochs):
     #记录时间
     since = time.time()
 
+    writer = SummaryWriter()
+
     # 一轮一轮训练数据
     for epoch in range(num_epochs):
         print(f"第 {epoch+1}/{num_epochs} 轮训练开始,使用{device}进行训练")
@@ -71,8 +75,9 @@ def train_model_process(model,train_dataloader,val_dataloader,num_epochs):
 
         train_num = 0
         val_num = 0
+        train_dataloader_tqdm = tqdm(train_dataloader, desc=f"Train Epoch {epoch + 1}/{num_epochs}", leave=True)
         #对于每一个批次的数据
-        for step,(b_x,b_y) in enumerate(train_dataloader):
+        for step,(b_x,b_y) in enumerate(train_dataloader_tqdm):
             #将张量放到GPU上
             b_x = b_x.to(device)
             b_y = b_y.to(device)
@@ -96,8 +101,14 @@ def train_model_process(model,train_dataloader,val_dataloader,num_epochs):
             train_corrects += torch.sum(pre_label == b_y.data)
             #累加所有的训练样本的数量
             train_num += b_x.size(0)
+            # 更新 tqdm 描述信息
+            # train_dataloader_tqdm.set_postfix(loss=loss.item(), acc=train_corrects.double().item() / train_num)
+        # 关闭 tqdm 进度条，避免多余的空行
+        train_dataloader_tqdm.close()
+        # 使用 tqdm 包装验证数据加载器
+        val_dataloader_tqdm = tqdm(val_dataloader, desc=f"Val Epoch {epoch + 1}/{num_epochs}", leave=True)
         # 取数据加载器里面的数据
-        for step, (b_x, b_y) in enumerate(val_dataloader):
+        for step, (b_x, b_y) in enumerate(val_dataloader_tqdm):
             b_x = b_x.to(device)
             b_y = b_y.to(device)
             #开启评估模式
@@ -114,14 +125,22 @@ def train_model_process(model,train_dataloader,val_dataloader,num_epochs):
             val_corrects += torch.sum(pre_lab==b_y.data)
             # 计算总样本的数量
             val_num += b_x.size(0)
+            # 更新 tqdm 描述信息
+            # val_dataloader_tqdm.set_postfix(loss=loss.item(), acc=val_corrects.double().item() / val_num)
+        # 关闭 tqdm 进度条，避免多余的空行
+        train_dataloader_tqdm.close()
         # 把每一轮的损失加到损失列表里
         train_loss_all.append(train_loss / train_num)
         # 把每一轮的正确率加到正确率列表里
         train_acc_all.append(train_corrects.double().item() / train_num)
+        writer.add_scalar("loss/train",train_loss/train_num,epoch)
+        writer.add_scalar("acc/train", train_corrects.double().item() / train_num, epoch)
 
 
         val_loss_all.append(val_loss / val_num)
         val_acc_all.append(val_corrects.double().item() / val_num)
+        writer.add_scalar("loss/val", val_loss / val_num, epoch)
+        writer.add_scalar("acc/val", val_corrects.double().item() / val_num, epoch)
 
         print(f"第 {epoch+1} 轮 Train Loss: {train_loss_all[-1]:.4f} Train Acc: {train_acc_all[-1]:.4f}")
         print(f"第 {epoch+1} 轮 Val Loss: {val_loss_all[-1]:.4f} Val Acc:{val_acc_all[-1]:.4f}")

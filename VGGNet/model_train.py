@@ -14,7 +14,7 @@ import pandas as pd
 #数据集加载和处理
 def train_val_data_process():
     #数据下载
-    train_data = FashionMNIST(root="./data",
+    train_data = FashionMNIST(root="../data",
                               train=True,
                               transform=transforms.Compose([transforms.Resize(size=224), transforms.ToTensor()]),
                               download=True)
