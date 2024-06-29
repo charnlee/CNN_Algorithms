@@ -11,7 +11,7 @@ class Residual(nn.Module):
         self.bn1 = nn.BatchNorm2d(out_channels)
         self.bn2 = nn.BatchNorm2d(out_channels)
         if use_conv:
-            self.c3 = nn.Conv2d(in_channels=in_channels,out_channels=out_channels,kernel_size=1,padding=1,stride=stride)
+            self.c3 = nn.Conv2d(in_channels=in_channels,out_channels=out_channels,kernel_size=1,padding=0,stride=stride)
         else:
             self.c3 = None
 
@@ -19,10 +19,8 @@ class Residual(nn.Module):
         y = self.re(self.bn1(self.c1(x)))
         y = self.bn2(self.c2(y))
         if self.c3:
-            x = self.re(y)
+            x = self.c3(x)
         y = self.re(y+x)
-        if self.c3:
-            x = self.re(y)
         return y
 
 class ResNet18(nn.Module):
@@ -62,6 +60,7 @@ class ResNet18(nn.Module):
         x = self.b3(x)
         x = self.b4(x)
         x = self.b5(x)
+        x = self.b6(x)
         return x
 
 if __name__=="__main__":
